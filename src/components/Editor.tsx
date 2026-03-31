@@ -22,7 +22,7 @@ export default function Editor({ onBack }: { onBack: () => void }) {
   const [, forceRender] = useState(0);
 
   useEffect(() => {
-    fetch('/data/painting-data.json')
+    fetch(import.meta.env.BASE_URL + 'data/painting-data.json')
       .then((r) => r.json())
       .then((d: GameData) => setGameData(d))
       .catch(() => alert('Ошибка загрузки данных'));
@@ -252,7 +252,7 @@ export default function Editor({ onBack }: { onBack: () => void }) {
           <div className="editor-image-wrapper" ref={wrapperRef}>
             <img
               ref={imageRef}
-              src={gameData.painting.image}
+              src={import.meta.env.BASE_URL + gameData.painting.image}
               alt={gameData.painting.title}
               className="editor-image"
               draggable={false}

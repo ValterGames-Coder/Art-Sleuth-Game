@@ -72,7 +72,7 @@ export default function App() {
     setFoundIds(new Set());
     setShowCompletion(false);
     setActivePopup(null);
-    fetch('/data/painting-data.json')
+    fetch(import.meta.env.BASE_URL + 'data/painting-data.json')
       .then((res) => res.json())
       .then((data: GameData) => setGameData(data))
       .catch(() => {});
@@ -103,7 +103,7 @@ export default function App() {
 
       <div className="app-content">
         <GameCanvas
-          imagePath={gameData.painting.image}
+          imagePath={import.meta.env.BASE_URL + gameData.painting.image}
           objects={gameData.objects}
           foundIds={foundIds}
           onObjectFound={handleObjectFound}
