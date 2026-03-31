@@ -26,7 +26,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    fetch('./data/painting-data.json')
+    fetch(import.meta.env.BASE_URL + 'data/painting-data.json')
       .then((res) => res.json())
       .then((data: GameData) => {
         setGameData(data);
