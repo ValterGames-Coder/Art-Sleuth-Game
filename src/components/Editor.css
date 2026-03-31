@@ -1,0 +1,377 @@
+.editor {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #1a1410;
+  color: #f0e6d3;
+  overflow: hidden;
+}
+
+/* ── Toolbar ── */
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: #241e16;
+  border-bottom: 1px solid rgba(200, 169, 110, 0.2);
+  flex-shrink: 0;
+}
+
+.editor-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #c8a96e;
+  margin-right: auto;
+}
+
+.editor-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editor-btn {
+  background: #2e2620;
+  color: #f0e6d3;
+  border: 1px solid rgba(200, 169, 110, 0.3);
+  border-radius: 4px;
+  padding: 6px 16px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.editor-btn:hover {
+  background: #3a3028;
+  border-color: #c8a96e;
+}
+
+.editor-btn-primary {
+  background: linear-gradient(180deg, #d4b87a 0%, #c8a96e 100%);
+  color: #1a1410;
+  border-color: #c8a96e;
+}
+
+.editor-btn-primary:hover {
+  background: linear-gradient(180deg, #dfc68a 0%, #d4b87a 100%);
+}
+
+.editor-btn-back {
+  margin-right: 8px;
+}
+
+.editor-btn-small {
+  padding: 4px 12px;
+  font-size: 14px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.editor-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #a89880;
+  cursor: pointer;
+  user-select: none;
+}
+
+.editor-toggle input {
+  accent-color: #c8a96e;
+}
+
+/* ── Body ── */
+
+.editor-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Canvas area ── */
+
+.editor-canvas-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.editor-image-wrapper {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.editor-image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 80px);
+  object-fit: contain;
+  border: 2px solid rgba(200, 169, 110, 0.3);
+}
+
+/* ── Zone overlays ── */
+
+.editor-zone {
+  position: absolute;
+  border: 2px solid #c8a96e;
+  background: rgba(200, 169, 110, 0.15);
+  cursor: move;
+  box-sizing: border-box;
+  transition: border-color 0.1s;
+}
+
+.editor-zone.selected {
+  border-color: #ff6b35;
+  background: rgba(255, 107, 53, 0.18);
+  z-index: 10;
+}
+
+.editor-zone-label {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a1410;
+  background: #c8a96e;
+  padding: 1px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.editor-zone.selected .editor-zone-label {
+  background: #ff6b35;
+  color: #fff;
+}
+
+.editor-zone-handle {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 12px;
+  height: 12px;
+  background: #c8a96e;
+  border: 2px solid #1a1410;
+  cursor: se-resize;
+  border-radius: 2px;
+}
+
+.editor-zone.selected .editor-zone-handle {
+  background: #ff6b35;
+}
+
+/* ── Sidebar ── */
+
+.editor-sidebar {
+  width: 280px;
+  background: #241e16;
+  border-left: 1px solid rgba(200, 169, 110, 0.2);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.editor-sidebar-title {
+  font-size: 16px;
+  color: #c8a96e;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(200, 169, 110, 0.15);
+}
+
+.editor-object-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.editor-object-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(200, 169, 110, 0.08);
+  transition: background 0.1s;
+}
+
+.editor-object-row:hover {
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.editor-object-row.active {
+  background: rgba(255, 107, 53, 0.12);
+  border-left: 3px solid #ff6b35;
+}
+
+.editor-object-name {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.editor-object-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.editor-icon-btn {
+  background: none;
+  border: none;
+  color: #a89880;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  line-height: 1;
+  transition: all 0.1s;
+}
+
+.editor-icon-btn:hover {
+  color: #f0e6d3;
+  background: rgba(200, 169, 110, 0.15);
+}
+
+.editor-icon-btn-danger:hover {
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.12);
+}
+
+/* ── Details panel ── */
+
+.editor-details {
+  padding: 14px 16px;
+  border-top: 1px solid rgba(200, 169, 110, 0.2);
+}
+
+.editor-details-title {
+  font-size: 15px;
+  color: #c8a96e;
+  margin-bottom: 10px;
+}
+
+.editor-coords {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.editor-coord-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor-coord-row label {
+  font-size: 13px;
+  color: #a89880;
+  min-width: 16px;
+}
+
+.editor-coord-row input {
+  width: 70px;
+  background: #1a1410;
+  border: 1px solid rgba(200, 169, 110, 0.25);
+  color: #f0e6d3;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+}
+
+.editor-coord-row input:focus {
+  outline: none;
+  border-color: #c8a96e;
+}
+
+/* ── Modal ── */
+
+.editor-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 6, 0.75);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.editor-modal {
+  background: #2e2620;
+  border: 2px solid #c8a96e;
+  border-radius: 8px;
+  padding: 24px 28px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.editor-modal h3 {
+  font-size: 20px;
+  color: #c8a96e;
+  margin-bottom: 18px;
+}
+
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.editor-form label {
+  font-size: 13px;
+  color: #a89880;
+  margin-top: 4px;
+}
+
+.editor-form input,
+.editor-form textarea {
+  background: #1a1410;
+  border: 1px solid rgba(200, 169, 110, 0.25);
+  color: #f0e6d3;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 16px;
+  resize: vertical;
+}
+
+.editor-form input:focus,
+.editor-form textarea:focus {
+  outline: none;
+  border-color: #c8a96e;
+}
+
+.editor-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* ── Loading ── */
+
+.editor-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1410;
+  color: #c8a96e;
+  font-size: 20px;
+}
