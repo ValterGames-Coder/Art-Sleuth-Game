@@ -11,7 +11,7 @@
 html,
 body {
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   overflow: hidden;
   font-family: 'Cormorant Garamond', Georgia, 'Palatino Linotype',
     'Times New Roman', serif;
@@ -20,10 +20,13 @@ body {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 #root {
   width: 100%;
-  height: 100%;
+  height: 100dvh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }

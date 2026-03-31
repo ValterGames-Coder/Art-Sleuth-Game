@@ -1,0 +1,10 @@
+{
+  "name": "Арт-Сыщик: Скрытые смыслы",
+  "short_name": "Арт-Сыщик",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a1410",
+  "theme_color": "#1a1410",
+  "icons": []
+}

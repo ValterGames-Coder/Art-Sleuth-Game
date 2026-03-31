@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { Application, Sprite, Assets, Container, Graphics } from 'pixi.js';
 import type { HiddenObject } from '../types/game';
 
@@ -8,6 +8,10 @@ interface GameCanvasProps {
   foundIds: Set<string>;
   onObjectFound: (obj: HiddenObject) => void;
 }
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
+const PAN_THRESHOLD = 8;
 
 export default function GameCanvas({
   imagePath,
@@ -30,6 +34,17 @@ export default function GameCanvas({
       g.visible = foundIds.has(id);
     }
   }, [foundIds]);
+
+  const requestFullscreen = useCallback(() => {
+    const el = document.documentElement;
+    const req =
+      el.requestFullscreen ??
+      (el as any).webkitRequestFullscreen ??
+      (el as any).msRequestFullscreen;
+    if (req) {
+      req.call(el).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -79,13 +94,250 @@ export default function GameCanvas({
         highlightsRef.current.set(obj.id, highlight);
       }
 
-      sprite.eventMode = 'static';
-      sprite.cursor = 'pointer';
+      let baseScale = 1;
+      let zoom = 1;
+      let panX = 0;
+      let panY = 0;
 
-      sprite.on('pointerdown', (event) => {
-        const local = event.getLocalPosition(sprite);
-        const px = (local.x / tw) * 100;
-        const py = (local.y / th) * 100;
+      const fitPainting = () => {
+        baseScale = Math.min(
+          app.screen.width / tw,
+          app.screen.height / th,
+        );
+        applyTransform();
+      };
+
+      const clampPan = () => {
+        const sw = app.screen.width;
+        const sh = app.screen.height;
+        const pw = tw * baseScale * zoom;
+        const ph = th * baseScale * zoom;
+
+        if (pw <= sw) {
+          panX = 0;
+        } else {
+          const maxPan = (pw - sw) / 2;
+          panX = Math.max(-maxPan, Math.min(maxPan, panX));
+        }
+
+        if (ph <= sh) {
+          panY = 0;
+        } else {
+          const maxPan = (ph - sh) / 2;
+          panY = Math.max(-maxPan, Math.min(maxPan, panY));
+        }
+      };
+
+      const applyTransform = () => {
+        const s = baseScale * zoom;
+        paintingContainer.scale.set(s);
+        clampPan();
+        paintingContainer.x = (app.screen.width - tw * s) / 2 + panX;
+        paintingContainer.y = (app.screen.height - th * s) / 2 + panY;
+      };
+
+      fitPainting();
+
+      // ── Pointer tracking for distinguishing tap from drag ──
+
+      let pointerDownPos: { x: number; y: number } | null = null;
+      let didPan = false;
+
+      // ── Mouse wheel zoom ──
+
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? 0.9 : 1.1;
+        const oldZoom = zoom;
+        zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * delta));
+
+        const rect = app.canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const cx = app.screen.width / 2;
+        const cy = app.screen.height / 2;
+        const factor = zoom / oldZoom;
+
+        panX = (panX + mx - cx) * factor - (mx - cx);
+        panY = (panY + my - cy) * factor - (my - cy);
+
+        applyTransform();
+      };
+
+      app.canvas.addEventListener('wheel', onWheel, { passive: false });
+
+      // ── Mouse drag pan ──
+
+      let mouseDragging = false;
+      let mouseLastX = 0;
+      let mouseLastY = 0;
+
+      const onMouseDown = (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        mouseDragging = true;
+        mouseLastX = e.clientX;
+        mouseLastY = e.clientY;
+        pointerDownPos = { x: e.clientX, y: e.clientY };
+        didPan = false;
+      };
+
+      const onMouseMove = (e: MouseEvent) => {
+        if (!mouseDragging) return;
+        const dx = e.clientX - mouseLastX;
+        const dy = e.clientY - mouseLastY;
+        mouseLastX = e.clientX;
+        mouseLastY = e.clientY;
+
+        if (
+          pointerDownPos &&
+          (Math.abs(e.clientX - pointerDownPos.x) > PAN_THRESHOLD ||
+            Math.abs(e.clientY - pointerDownPos.y) > PAN_THRESHOLD)
+        ) {
+          didPan = true;
+        }
+
+        if (zoom > 1) {
+          panX += dx;
+          panY += dy;
+          applyTransform();
+        }
+      };
+
+      const onMouseUp = (e: MouseEvent) => {
+        if (!mouseDragging) return;
+        mouseDragging = false;
+
+        if (!didPan && pointerDownPos) {
+          handleTap(e.clientX, e.clientY);
+        }
+        pointerDownPos = null;
+      };
+
+      app.canvas.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
+      // ── Touch: single-finger pan + two-finger pinch-zoom ──
+
+      let activeTouches: Touch[] = [];
+      let lastTouchDist = 0;
+      let lastTouchCenterX = 0;
+      let lastTouchCenterY = 0;
+      let touchStartPos: { x: number; y: number } | null = null;
+      let touchDidPan = false;
+
+      const getTouchDist = (t1: Touch, t2: Touch) =>
+        Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+
+      const getTouchCenter = (t1: Touch, t2: Touch) => ({
+        x: (t1.clientX + t2.clientX) / 2,
+        y: (t1.clientY + t2.clientY) / 2,
+      });
+
+      const onTouchStart = (e: TouchEvent) => {
+        e.preventDefault();
+        activeTouches = Array.from(e.touches);
+        if (activeTouches.length === 1) {
+          const t = activeTouches[0];
+          lastTouchCenterX = t.clientX;
+          lastTouchCenterY = t.clientY;
+          touchStartPos = { x: t.clientX, y: t.clientY };
+          touchDidPan = false;
+        } else if (activeTouches.length === 2) {
+          lastTouchDist = getTouchDist(activeTouches[0], activeTouches[1]);
+          const c = getTouchCenter(activeTouches[0], activeTouches[1]);
+          lastTouchCenterX = c.x;
+          lastTouchCenterY = c.y;
+          touchDidPan = true;
+        }
+      };
+
+      const onTouchMove = (e: TouchEvent) => {
+        e.preventDefault();
+        activeTouches = Array.from(e.touches);
+
+        if (activeTouches.length === 1 && zoom > 1) {
+          const t = activeTouches[0];
+          const dx = t.clientX - lastTouchCenterX;
+          const dy = t.clientY - lastTouchCenterY;
+          lastTouchCenterX = t.clientX;
+          lastTouchCenterY = t.clientY;
+
+          if (
+            touchStartPos &&
+            (Math.abs(t.clientX - touchStartPos.x) > PAN_THRESHOLD ||
+              Math.abs(t.clientY - touchStartPos.y) > PAN_THRESHOLD)
+          ) {
+            touchDidPan = true;
+          }
+
+          panX += dx;
+          panY += dy;
+          applyTransform();
+        } else if (activeTouches.length === 2) {
+          touchDidPan = true;
+          const dist = getTouchDist(activeTouches[0], activeTouches[1]);
+          const c = getTouchCenter(activeTouches[0], activeTouches[1]);
+
+          const oldZoom = zoom;
+          const scale = dist / lastTouchDist;
+          zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * scale));
+
+          const rect = app.canvas.getBoundingClientRect();
+          const mx = c.x - rect.left;
+          const my = c.y - rect.top;
+          const cx = app.screen.width / 2;
+          const cy = app.screen.height / 2;
+          const factor = zoom / oldZoom;
+
+          panX = (panX + mx - cx) * factor - (mx - cx) + (c.x - lastTouchCenterX);
+          panY = (panY + my - cy) * factor - (my - cy) + (c.y - lastTouchCenterY);
+
+          lastTouchDist = dist;
+          lastTouchCenterX = c.x;
+          lastTouchCenterY = c.y;
+          applyTransform();
+        }
+      };
+
+      const onTouchEnd = (e: TouchEvent) => {
+        e.preventDefault();
+        if (activeTouches.length === 1 && e.touches.length === 0) {
+          if (!touchDidPan && touchStartPos) {
+            const t = activeTouches[0];
+            handleTap(t.clientX, t.clientY);
+          }
+        }
+        activeTouches = Array.from(e.touches);
+        if (activeTouches.length === 1) {
+          lastTouchCenterX = activeTouches[0].clientX;
+          lastTouchCenterY = activeTouches[0].clientY;
+        }
+        touchStartPos = null;
+      };
+
+      app.canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+      app.canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+      app.canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+
+      // ── Tap handler (shared by mouse and touch) ──
+
+      const handleTap = (clientX: number, clientY: number) => {
+        const rect = app.canvas.getBoundingClientRect();
+        const canvasX = clientX - rect.left;
+        const canvasY = clientY - rect.top;
+
+        const s = baseScale * zoom;
+        const ox = (app.screen.width - tw * s) / 2 + panX;
+        const oy = (app.screen.height - th * s) / 2 + panY;
+
+        const localX = (canvasX - ox) / s;
+        const localY = (canvasY - oy) / s;
+
+        if (localX < 0 || localX > tw || localY < 0 || localY > th) return;
+
+        const px = (localX / tw) * 100;
+        const py = (localY / th) * 100;
 
         for (const obj of objectsRef.current) {
           if (foundRef.current.has(obj.id)) continue;
@@ -95,29 +347,53 @@ export default function GameCanvas({
             return;
           }
         }
-      });
-
-      const fitPainting = () => {
-        const scale = Math.min(
-          app.screen.width / tw,
-          app.screen.height / th
-        );
-        paintingContainer.scale.set(scale);
-        paintingContainer.x = (app.screen.width - tw * scale) / 2;
-        paintingContainer.y = (app.screen.height - th * scale) / 2;
       };
 
-      fitPainting();
+      // ── Remove PixiJS built-in pointer listener (we handle it ourselves) ──
+      sprite.eventMode = 'none';
+
+      // ── Double tap to reset zoom ──
+
+      let lastTapTime = 0;
+      const onDoubleTap = () => {
+        const now = Date.now();
+        if (now - lastTapTime < 350) {
+          zoom = zoom > 1.1 ? 1 : 2.5;
+          if (zoom === 1) {
+            panX = 0;
+            panY = 0;
+          }
+          applyTransform();
+        }
+        lastTapTime = now;
+      };
+
+      app.canvas.addEventListener('pointerup', onDoubleTap);
 
       onResize = () => requestAnimationFrame(fitPainting);
       window.addEventListener('resize', onResize);
+
+      return () => {
+        app.canvas.removeEventListener('wheel', onWheel);
+        app.canvas.removeEventListener('mousedown', onMouseDown);
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        app.canvas.removeEventListener('touchstart', onTouchStart);
+        app.canvas.removeEventListener('touchmove', onTouchMove);
+        app.canvas.removeEventListener('touchend', onTouchEnd);
+        app.canvas.removeEventListener('pointerup', onDoubleTap);
+      };
     };
 
-    init();
+    let cleanup: (() => void) | undefined;
+    init().then((c) => {
+      cleanup = c;
+    });
 
     return () => {
       destroyed = true;
       if (onResize) window.removeEventListener('resize', onResize);
+      cleanup?.();
       highlightsRef.current.clear();
       try {
         app.destroy(true);
@@ -127,5 +403,21 @@ export default function GameCanvas({
     };
   }, [imagePath, objects]);
 
-  return <div ref={containerRef} className="game-canvas" />;
+  return (
+    <>
+      <div ref={containerRef} className="game-canvas" />
+      <button
+        className="fullscreen-btn"
+        onClick={requestFullscreen}
+        title="Полный экран"
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 3 21 3 21 9" />
+          <polyline points="9 21 3 21 3 15" />
+          <line x1="21" y1="3" x2="14" y2="10" />
+          <line x1="3" y1="21" x2="10" y2="14" />
+        </svg>
+      </button>
+    </>
+  );
 }
