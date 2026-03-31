@@ -47,21 +47,6 @@ export default function Editor({ onBack }: { onBack: () => void }) {
     [getImageRect],
   );
 
-  const pixelToPct = useCallback(
-    (left: number, top: number, width: number, height: number) => {
-      const rect = getImageRect();
-      if (!rect)
-        return { x: 0, y: 0, width: 0, height: 0 };
-      return {
-        x: Math.max(0, Math.min(100, (left / rect.width) * 100)),
-        y: Math.max(0, Math.min(100, (top / rect.height) * 100)),
-        width: Math.max(1, Math.min(100, (width / rect.width) * 100)),
-        height: Math.max(1, Math.min(100, (height / rect.height) * 100)),
-      };
-    },
-    [getImageRect],
-  );
-
   const updateObjectZone = useCallback(
     (id: string, zone: Zone) => {
       if (!gameData) return;
