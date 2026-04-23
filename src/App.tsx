@@ -52,7 +52,10 @@ async function resolveWikiImage(painting: PaintingInfo): Promise<string | null> 
 
 export default function App() {
   const [route, setRoute] = useState<RouteState>(() => parseHash());
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(() => {
+    const coarse = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    return coarse || window.innerWidth <= 768;
+  });
   const [catalog, setCatalog] = useState<PaintingCatalogItem[]>([]);
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [resolvedImage, setResolvedImage] = useState<string | null>(null);
@@ -71,7 +74,9 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 768px)');
+    const media = window.matchMedia(
+      '(max-width: 768px), (hover: none) and (pointer: coarse)',
+    );
     const onChange = () => setIsMobile(media.matches);
     onChange();
     media.addEventListener('change', onChange);

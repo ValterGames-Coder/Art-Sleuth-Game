@@ -36,14 +36,36 @@ export default function GameCanvas({
   }, [foundIds]);
 
   const requestFullscreen = useCallback(() => {
-    const el = document.documentElement;
+    const doc = document as Document & {
+      webkitExitFullscreen?: () => Promise<void> | void;
+      msExitFullscreen?: () => Promise<void> | void;
+      webkitFullscreenElement?: Element | null;
+      msFullscreenElement?: Element | null;
+    };
+    const isFullscreen = Boolean(
+      doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.msFullscreenElement,
+    );
+
+    if (isFullscreen) {
+      const exit =
+        doc.exitFullscreen ??
+        doc.webkitExitFullscreen ??
+        doc.msExitFullscreen;
+      exit?.call(doc);
+      return;
+    }
+
+    const el = document.documentElement as HTMLElement & {
+      webkitRequestFullscreen?: () => Promise<void>;
+      msRequestFullscreen?: () => Promise<void>;
+    };
     const req =
       el.requestFullscreen ??
-      (el as any).webkitRequestFullscreen ??
-      (el as any).msRequestFullscreen;
-    if (req) {
-      req.call(el).catch(() => {});
-    }
+      el.webkitRequestFullscreen ??
+      el.msRequestFullscreen;
+    req?.call(el).catch(() => {});
   }, []);
 
   useEffect(() => {
