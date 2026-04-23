@@ -1,0 +1,47 @@
+[
+  {
+    "id": "bruegel-proverbs",
+    "title": "Нидерландские пословицы",
+    "artist": "Питер Брейгель Старший",
+    "year": 1559,
+    "museum": "Gemäldegalerie, Берлин",
+    "dataPath": "data/paintings/bruegel-proverbs.json",
+    "qrPath": "qr/bruegel-proverbs.svg"
+  },
+  {
+    "id": "serov-girl-with-peaches",
+    "title": "Девочка с персиками",
+    "artist": "Валентин Серов",
+    "year": 1887,
+    "museum": "Государственная Третьяковская галерея",
+    "dataPath": "data/paintings/serov-girl-with-peaches.json",
+    "qrPath": "qr/serov-girl-with-peaches.svg"
+  },
+  {
+    "id": "shishkin-morning",
+    "title": "Утро в сосновом лесу",
+    "artist": "Иван Шишкин",
+    "year": 1889,
+    "museum": "Государственная Третьяковская галерея",
+    "dataPath": "data/paintings/shishkin-morning.json",
+    "qrPath": "qr/shishkin-morning.svg"
+  },
+  {
+    "id": "savrasov-rooks",
+    "title": "Грачи прилетели",
+    "artist": "Алексей Саврасов",
+    "year": 1871,
+    "museum": "Государственная Третьяковская галерея",
+    "dataPath": "data/paintings/savrasov-rooks.json",
+    "qrPath": "qr/savrasov-rooks.svg"
+  },
+  {
+    "id": "vasnetsov-bogatyrs",
+    "title": "Богатыри",
+    "artist": "Виктор Васнецов",
+    "year": 1898,
+    "museum": "Государственная Третьяковская галерея",
+    "dataPath": "data/paintings/vasnetsov-bogatyrs.json",
+    "qrPath": "qr/vasnetsov-bogatyrs.svg"
+  }
+]

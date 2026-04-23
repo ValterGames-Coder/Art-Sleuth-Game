@@ -19,15 +19,28 @@ export interface HiddenObject {
 }
 
 export interface PaintingInfo {
+  id: string;
   title: string;
   artist: string;
   year: number;
   museum: string;
   description: string;
-  image: string;
+  image?: string;
+  wikiPage?: string;
+  articleUrl?: string;
 }
 
 export interface GameData {
   painting: PaintingInfo;
   objects: HiddenObject[];
+}
+
+export interface PaintingCatalogItem {
+  id: string;
+  title: string;
+  artist: string;
+  year: number;
+  museum: string;
+  dataPath: string;
+  qrPath: string;
 }

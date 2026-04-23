@@ -11,7 +11,13 @@ interface DragState {
   startZone: Zone;
 }
 
-export default function Editor({ onBack }: { onBack: () => void }) {
+export default function Editor({
+  onBack,
+  paintingId,
+}: {
+  onBack: () => void;
+  paintingId: string | null;
+}) {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingObject, setEditingObject] = useState<HiddenObject | null>(null);
@@ -22,11 +28,14 @@ export default function Editor({ onBack }: { onBack: () => void }) {
   const [, forceRender] = useState(0);
 
   useEffect(() => {
-    fetch(import.meta.env.BASE_URL + 'data/painting-data.json')
+    const path = paintingId
+      ? `data/paintings/${paintingId}.json`
+      : 'data/painting-data.json';
+    fetch(import.meta.env.BASE_URL + path)
       .then((r) => r.json())
       .then((d: GameData) => setGameData(d))
       .catch(() => alert('Ошибка загрузки данных'));
-  }, []);
+  }, [paintingId]);
 
   const getImageRect = useCallback(() => {
     if (!imageRef.current) return null;
@@ -183,7 +192,7 @@ export default function Editor({ onBack }: { onBack: () => void }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'painting-data.json';
+    a.download = `${gameData.painting.id || 'painting'}-data.json`;
     a.click();
     URL.revokeObjectURL(url);
   }, [gameData]);

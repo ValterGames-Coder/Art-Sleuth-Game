@@ -1,16 +1,59 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import GameCanvas from './components/GameCanvas';
 import ObjectList from './components/ObjectList';
 import InfoPopup from './components/InfoPopup';
 import Editor from './components/Editor';
-import type { GameData, HiddenObject } from './types/game';
+import type {
+  GameData,
+  HiddenObject,
+  PaintingCatalogItem,
+  PaintingInfo,
+} from './types/game';
 import './App.css';
 
-export default function App() {
-  const [page, setPage] = useState<'game' | 'editor'>(() => {
-    return window.location.hash === '#editor' ? 'editor' : 'game';
+type Page = 'game' | 'editor' | 'qr';
+
+interface RouteState {
+  page: Page;
+  paintingId: string | null;
+}
+
+function parseHash(): RouteState {
+  const hash = window.location.hash.replace(/^#/, '').trim();
+  if (hash === 'qr') return { page: 'qr', paintingId: null };
+  if (hash.startsWith('editor/')) {
+    return { page: 'editor', paintingId: decodeURIComponent(hash.slice(7)) || null };
+  }
+  if (hash === 'editor') return { page: 'editor', paintingId: null };
+  if (hash.startsWith('painting/')) {
+    return { page: 'game', paintingId: decodeURIComponent(hash.slice(9)) || null };
+  }
+  return { page: 'game', paintingId: null };
+}
+
+function normalizeImagePath(path: string | undefined) {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return import.meta.env.BASE_URL + path.replace(/^\/+/, '');
+}
+
+async function resolveWikiImage(painting: PaintingInfo): Promise<string | null> {
+  if (!painting.wikiPage) return null;
+  const title = encodeURIComponent(painting.wikiPage);
+  const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${title}`;
+  const res = await fetch(url, {
+    headers: { 'Api-User-Agent': 'ArtSleuth/1.0 (Terra-Politech project)' },
   });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.originalimage?.source ?? data.thumbnail?.source ?? null;
+}
+
+export default function App() {
+  const [route, setRoute] = useState<RouteState>(() => parseHash());
+  const [catalog, setCatalog] = useState<PaintingCatalogItem[]>([]);
   const [gameData, setGameData] = useState<GameData | null>(null);
+  const [resolvedImage, setResolvedImage] = useState<string | null>(null);
   const [foundIds, setFoundIds] = useState<Set<string>>(new Set());
   const [activePopup, setActivePopup] = useState<HiddenObject | null>(null);
   const [showCompletion, setShowCompletion] = useState(false);
@@ -19,25 +62,67 @@ export default function App() {
 
   useEffect(() => {
     const onHash = () => {
-      setPage(window.location.hash === '#editor' ? 'editor' : 'game');
+      setRoute(parseHash());
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
   useEffect(() => {
-    fetch(import.meta.env.BASE_URL + 'data/painting-data.json')
+    fetch(import.meta.env.BASE_URL + 'data/paintings-catalog.json')
       .then((res) => res.json())
-      .then((data: GameData) => {
-        setGameData(data);
-        setLoading(false);
+      .then((data: PaintingCatalogItem[]) => {
+        setCatalog(data);
       })
       .catch((err) => {
-        setError('Ошибка загрузки данных');
+        setError('Ошибка загрузки каталога картин');
         setLoading(false);
         console.error(err);
       });
   }, []);
+
+  const selectedPaintingId = useMemo(() => {
+    if (!catalog.length) return null;
+    if (route.paintingId && catalog.some((p) => p.id === route.paintingId)) {
+      return route.paintingId;
+    }
+    return catalog[0].id;
+  }, [catalog, route.paintingId]);
+
+  const selectedCatalogItem = useMemo(
+    () => catalog.find((p) => p.id === selectedPaintingId) ?? null,
+    [catalog, selectedPaintingId],
+  );
+
+  useEffect(() => {
+    if (!selectedCatalogItem) return;
+    fetch(import.meta.env.BASE_URL + selectedCatalogItem.dataPath)
+      .then((res) => res.json())
+      .then(async (data: GameData) => {
+        const staticImage = normalizeImagePath(data.painting.image);
+        if (staticImage) {
+          setResolvedImage(staticImage);
+        } else {
+          try {
+            const wikiImage = await resolveWikiImage(data.painting);
+            setResolvedImage(wikiImage);
+          } catch {
+            setResolvedImage(null);
+          }
+        }
+        setGameData(data);
+        setFoundIds(new Set());
+        setShowCompletion(false);
+        setActivePopup(null);
+        setError(null);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('Ошибка загрузки данных картины');
+        setLoading(false);
+        console.error(err);
+      });
+  }, [selectedCatalogItem]);
 
   const handleObjectFound = useCallback(
     (obj: HiddenObject) => {
@@ -63,31 +148,71 @@ export default function App() {
     setShowCompletion(false);
   }, []);
 
-  const goToEditor = useCallback(() => {
-    window.location.hash = '#editor';
+  const goToEditor = useCallback(
+    (paintingId: string | null) => {
+      window.location.hash = paintingId ? `#editor/${paintingId}` : '#editor';
+    },
+    [],
+  );
+
+  const goToGame = useCallback((paintingId: string | null) => {
+    window.location.hash = paintingId ? `#painting/${paintingId}` : '';
   }, []);
 
-  const goToGame = useCallback(() => {
-    window.location.hash = '';
-    setFoundIds(new Set());
-    setShowCompletion(false);
-    setActivePopup(null);
-    fetch(import.meta.env.BASE_URL + 'data/painting-data.json')
-      .then((res) => res.json())
-      .then((data: GameData) => setGameData(data))
-      .catch(() => {});
+  const goToQr = useCallback(() => {
+    window.location.hash = '#qr';
   }, []);
 
-  if (page === 'editor') {
-    return <Editor onBack={goToGame} />;
+  const onChangePainting = useCallback((id: string) => {
+    setLoading(true);
+    setResolvedImage(null);
+    window.location.hash = `#painting/${id}`;
+  }, []);
+
+  if (route.page === 'editor') {
+    return <Editor paintingId={selectedPaintingId} onBack={() => goToGame(selectedPaintingId)} />;
   }
 
   if (loading) {
     return <div className="loading">Загрузка...</div>;
   }
 
-  if (error || !gameData) {
+  if (error || !gameData || !selectedPaintingId) {
     return <div className="loading">{error ?? 'Ошибка загрузки'}</div>;
+  }
+
+  if (route.page === 'qr') {
+    return (
+      <div className="qr-page">
+        <div className="qr-header">
+          <h1>QR-коды по картинам</h1>
+          <button className="qr-back-btn" onClick={() => goToGame(selectedPaintingId)}>
+            Назад к игре
+          </button>
+        </div>
+        <div className="qr-grid">
+          {catalog.map((item) => {
+            const gameUrl = `${window.location.origin}${import.meta.env.BASE_URL}#painting/${item.id}`;
+            return (
+              <article key={item.id} className="qr-card">
+                <img
+                  src={import.meta.env.BASE_URL + item.qrPath}
+                  alt={`QR для картины ${item.title}`}
+                  className="qr-image"
+                />
+                <h3>{item.title}</h3>
+                <p>
+                  {item.artist}, {item.year}
+                </p>
+                <a href={gameUrl} target="_blank" rel="noreferrer">
+                  Открыть страницу картины
+                </a>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -102,12 +227,16 @@ export default function App() {
       </div>
 
       <div className="app-content">
+        {resolvedImage ? (
         <GameCanvas
-          imagePath={import.meta.env.BASE_URL + gameData.painting.image}
+          imagePath={resolvedImage}
           objects={gameData.objects}
           foundIds={foundIds}
           onObjectFound={handleObjectFound}
         />
+        ) : (
+          <div className="loading">Не удалось загрузить изображение картины</div>
+        )}
 
         <div className="header">
           <div className="header-title">
@@ -116,10 +245,25 @@ export default function App() {
             {gameData.painting.title}, {gameData.painting.year}
           </div>
           <div className="header-right">
+            <select
+              className="painting-select"
+              value={selectedPaintingId}
+              onChange={(e) => onChangePainting(e.target.value)}
+              title="Выбор картины"
+            >
+              {catalog.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.artist} — {item.title}
+                </option>
+              ))}
+            </select>
             <div className="header-score">
               {foundIds.size} / {gameData.objects.length}
             </div>
-            <button className="editor-link" onClick={goToEditor} title="Редактор зон">
+            <button className="editor-link" onClick={goToQr} title="QR-коды">
+              QR
+            </button>
+            <button className="editor-link" onClick={() => goToEditor(selectedPaintingId)} title="Редактор зон">
               &#9881;
             </button>
           </div>
@@ -141,8 +285,8 @@ export default function App() {
               <p className="completion-text">
                 Вы раскрыли тайные смыслы картины
                 &laquo;{gameData.painting.title}&raquo; кисти{' '}
-                {gameData.painting.artist}. Каждая деталь этого полотна хранит
-                мудрость нидерландских пословиц XVI века.
+                {gameData.painting.artist}. Исследование завершено, но вы можете
+                открыть следующую картину и продолжить поиск.
               </p>
               <button className="completion-btn" onClick={handleRestart}>
                 Начать заново
