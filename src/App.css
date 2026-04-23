@@ -443,20 +443,55 @@
   .header {
     padding: 8px 12px;
     gap: 8px;
+    align-items: flex-start;
   }
 
   .header-title {
     font-size: 14px;
-    max-width: 45vw;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 70vw;
+    line-height: 1.2;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .painting-select {
     max-width: 42vw;
     font-size: 13px;
     padding: 4px 6px;
+  }
+
+  .header.mobile-clean {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header.mobile-clean .header-title {
+    max-width: calc(100vw - 120px);
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+
+  .header-score {
+    font-size: 14px;
+    line-height: 1;
+    margin-top: 2px;
+  }
+
+  .object-list {
+    padding: 8px 10px;
+    gap: 2px;
+  }
+
+  .object-item {
+    font-size: 14px;
+    line-height: 1.15;
+  }
+
+  .object-separator {
+    padding: 0 2px;
   }
 
   .popup-overlay,
@@ -474,7 +509,8 @@
   }
 
   .popup-title {
-    font-size: 20px;
+    font-size: 18px;
+    line-height: 1.25;
   }
 
   .popup-body {

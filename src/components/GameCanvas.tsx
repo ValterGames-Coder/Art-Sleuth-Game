@@ -278,7 +278,7 @@ export default function GameCanvas({
             touchTapCandidate = false;
           }
 
-          if (zoom > 1 || Math.abs(dx) > 0 || Math.abs(dy) > 0) {
+          if (zoom > 1) {
             panX += dx;
             panY += dy;
             applyTransform();
@@ -384,24 +384,6 @@ export default function GameCanvas({
       // ── Remove PixiJS built-in pointer listener (we handle it ourselves) ──
       sprite.eventMode = 'none';
 
-      // ── Double tap to reset zoom ──
-
-      let lastTapTime = 0;
-      const onDoubleTap = () => {
-        const now = Date.now();
-        if (now - lastTapTime < 350) {
-          zoom = zoom > 1.1 ? 1 : 2.5;
-          if (zoom === 1) {
-            panX = 0;
-            panY = 0;
-          }
-          applyTransform();
-        }
-        lastTapTime = now;
-      };
-
-      app.canvas.addEventListener('pointerup', onDoubleTap);
-
       onResize = () => requestAnimationFrame(fitPainting);
       window.addEventListener('resize', onResize);
 
@@ -413,7 +395,6 @@ export default function GameCanvas({
         app.canvas.removeEventListener('touchstart', onTouchStart);
         app.canvas.removeEventListener('touchmove', onTouchMove);
         app.canvas.removeEventListener('touchend', onTouchEnd);
-        app.canvas.removeEventListener('pointerup', onDoubleTap);
       };
     };
 

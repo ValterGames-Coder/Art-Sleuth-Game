@@ -52,6 +52,7 @@ async function resolveWikiImage(painting: PaintingInfo): Promise<string | null> 
 
 export default function App() {
   const [route, setRoute] = useState<RouteState>(() => parseHash());
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [catalog, setCatalog] = useState<PaintingCatalogItem[]>([]);
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [resolvedImage, setResolvedImage] = useState<string | null>(null);
@@ -67,6 +68,14 @@ export default function App() {
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 768px)');
+    const onChange = () => setIsMobile(media.matches);
+    onChange();
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
   }, []);
 
   useEffect(() => {
@@ -248,34 +257,40 @@ export default function App() {
           <div className="loading">Не удалось загрузить изображение картины</div>
         )}
 
-        <div className="header">
+        <div className={`header${isMobile ? ' mobile-clean' : ''}`}>
           <div className="header-title">
             <span>{gameData.painting.artist}</span>
             {' — '}
             {gameData.painting.title}, {gameData.painting.year}
           </div>
           <div className="header-right">
-            <select
-              className="painting-select"
-              value={selectedPaintingId}
-              onChange={(e) => onChangePainting(e.target.value)}
-              title="Выбор картины"
-            >
-              {catalog.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.artist} — {item.title}
-                </option>
-              ))}
-            </select>
+            {!isMobile && (
+              <select
+                className="painting-select"
+                value={selectedPaintingId}
+                onChange={(e) => onChangePainting(e.target.value)}
+                title="Выбор картины"
+              >
+                {catalog.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.artist} — {item.title}
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="header-score">
               {foundIds.size} / {gameData.objects.length}
             </div>
-            <button className="editor-link" onClick={goToQr} title="QR-коды">
-              QR
-            </button>
-            <button className="editor-link" onClick={() => goToEditor(selectedPaintingId)} title="Редактор зон">
-              &#9881;
-            </button>
+            {!isMobile && (
+              <>
+                <button className="editor-link" onClick={goToQr} title="QR-коды">
+                  QR
+                </button>
+                <button className="editor-link" onClick={() => goToEditor(selectedPaintingId)} title="Редактор зон">
+                  &#9881;
+                </button>
+              </>
+            )}
           </div>
         </div>
 
