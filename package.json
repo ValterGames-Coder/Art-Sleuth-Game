@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate:qr": "node scripts/generate-qr.mjs"
+    "generate:qr": "node scripts/generate-qr.mjs",
+    "fetch:paintings": "node scripts/fetch-paintings.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.17.1",

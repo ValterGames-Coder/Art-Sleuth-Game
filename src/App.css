@@ -439,6 +439,78 @@
   }
 }
 
+@media (max-width: 768px) {
+  .header {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .header-title {
+    font-size: 14px;
+    max-width: 45vw;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .painting-select {
+    max-width: 42vw;
+    font-size: 13px;
+    padding: 4px 6px;
+  }
+
+  .popup-overlay,
+  .completion-overlay {
+    padding: 10px;
+  }
+
+  .popup-card {
+    max-width: 96vw;
+    max-height: 80vh;
+  }
+
+  .popup-header {
+    padding: 14px 14px 10px;
+  }
+
+  .popup-title {
+    font-size: 20px;
+  }
+
+  .popup-body {
+    padding: 10px 14px;
+  }
+
+  .popup-description {
+    font-size: 16px;
+    line-height: 1.45;
+    margin-bottom: 10px;
+  }
+
+  .popup-source {
+    font-size: 14px;
+  }
+
+  .popup-footer {
+    padding: 8px 14px 14px;
+  }
+
+  .completion-card {
+    max-width: 96vw;
+    padding: 18px 14px;
+  }
+
+  .completion-title {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .completion-text {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+}
+
 .qr-page {
   width: 100%;
   min-height: 100%;

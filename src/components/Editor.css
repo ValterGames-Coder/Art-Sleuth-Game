@@ -33,6 +33,11 @@
   gap: 10px;
 }
 
+.editor-save-state {
+  font-size: 13px;
+  color: #a89880;
+}
+
 .editor-btn {
   background: #2e2620;
   color: #f0e6d3;

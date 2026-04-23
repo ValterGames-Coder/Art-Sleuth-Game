@@ -64,6 +64,7 @@ export default function GameCanvas({
       if (destroyed) return;
 
       containerRef.current!.appendChild(app.canvas);
+      app.canvas.style.touchAction = 'none';
 
       const texture = await Assets.load(imagePath);
       if (destroyed) return;
@@ -224,7 +225,9 @@ export default function GameCanvas({
       let lastTouchCenterX = 0;
       let lastTouchCenterY = 0;
       let touchStartPos: { x: number; y: number } | null = null;
+      let touchStartTime = 0;
       let touchDidPan = false;
+      let touchTapCandidate = false;
 
       const getTouchDist = (t1: Touch, t2: Touch) =>
         Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
@@ -242,13 +245,16 @@ export default function GameCanvas({
           lastTouchCenterX = t.clientX;
           lastTouchCenterY = t.clientY;
           touchStartPos = { x: t.clientX, y: t.clientY };
+          touchStartTime = Date.now();
           touchDidPan = false;
+          touchTapCandidate = true;
         } else if (activeTouches.length === 2) {
           lastTouchDist = getTouchDist(activeTouches[0], activeTouches[1]);
           const c = getTouchCenter(activeTouches[0], activeTouches[1]);
           lastTouchCenterX = c.x;
           lastTouchCenterY = c.y;
           touchDidPan = true;
+          touchTapCandidate = false;
         }
       };
 
@@ -256,7 +262,7 @@ export default function GameCanvas({
         e.preventDefault();
         activeTouches = Array.from(e.touches);
 
-        if (activeTouches.length === 1 && zoom > 1) {
+        if (activeTouches.length === 1) {
           const t = activeTouches[0];
           const dx = t.clientX - lastTouchCenterX;
           const dy = t.clientY - lastTouchCenterY;
@@ -269,14 +275,22 @@ export default function GameCanvas({
               Math.abs(t.clientY - touchStartPos.y) > PAN_THRESHOLD)
           ) {
             touchDidPan = true;
+            touchTapCandidate = false;
           }
 
-          panX += dx;
-          panY += dy;
-          applyTransform();
+          if (zoom > 1 || Math.abs(dx) > 0 || Math.abs(dy) > 0) {
+            panX += dx;
+            panY += dy;
+            applyTransform();
+          }
         } else if (activeTouches.length === 2) {
           touchDidPan = true;
           const dist = getTouchDist(activeTouches[0], activeTouches[1]);
+          if (dist <= 0) return;
+          if (lastTouchDist <= 0) {
+            lastTouchDist = dist;
+            return;
+          }
           const c = getTouchCenter(activeTouches[0], activeTouches[1]);
 
           const oldZoom = zoom;
@@ -302,18 +316,36 @@ export default function GameCanvas({
 
       const onTouchEnd = (e: TouchEvent) => {
         e.preventDefault();
-        if (activeTouches.length === 1 && e.touches.length === 0) {
-          if (!touchDidPan && touchStartPos) {
-            const t = activeTouches[0];
-            handleTap(t.clientX, t.clientY);
-          }
+        const endedTouch = e.changedTouches[0];
+        if (
+          touchTapCandidate &&
+          !touchDidPan &&
+          touchStartPos &&
+          e.touches.length === 0 &&
+          Date.now() - touchStartTime < 350 &&
+          endedTouch
+        ) {
+          handleTap(endedTouch.clientX, endedTouch.clientY);
         }
+
         activeTouches = Array.from(e.touches);
         if (activeTouches.length === 1) {
           lastTouchCenterX = activeTouches[0].clientX;
           lastTouchCenterY = activeTouches[0].clientY;
+          touchStartPos = {
+            x: activeTouches[0].clientX,
+            y: activeTouches[0].clientY,
+          };
+          touchStartTime = Date.now();
+          touchDidPan = false;
+          touchTapCandidate = true;
+        } else {
+          touchStartPos = null;
+          touchTapCandidate = false;
+          if (activeTouches.length < 2) {
+            lastTouchDist = 0;
+          }
         }
-        touchStartPos = null;
       };
 
       app.canvas.addEventListener('touchstart', onTouchStart, { passive: false });

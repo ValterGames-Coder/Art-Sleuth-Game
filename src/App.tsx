@@ -9,6 +9,7 @@ import type {
   PaintingCatalogItem,
   PaintingInfo,
 } from './types/game';
+import { loadPaintingConfig } from './utils/paintingConfig';
 import './App.css';
 
 type Page = 'game' | 'editor' | 'qr';
@@ -99,18 +100,20 @@ export default function App() {
     fetch(import.meta.env.BASE_URL + selectedCatalogItem.dataPath)
       .then((res) => res.json())
       .then(async (data: GameData) => {
-        const staticImage = normalizeImagePath(data.painting.image);
+        const cached = loadPaintingConfig(data.painting.id);
+        const resolvedData = cached ?? data;
+        const staticImage = normalizeImagePath(resolvedData.painting.image);
         if (staticImage) {
           setResolvedImage(staticImage);
         } else {
           try {
-            const wikiImage = await resolveWikiImage(data.painting);
+            const wikiImage = await resolveWikiImage(resolvedData.painting);
             setResolvedImage(wikiImage);
           } catch {
             setResolvedImage(null);
           }
         }
-        setGameData(data);
+        setGameData(resolvedData);
         setFoundIds(new Set());
         setShowCompletion(false);
         setActivePopup(null);
@@ -123,6 +126,13 @@ export default function App() {
         console.error(err);
       });
   }, [selectedCatalogItem]);
+
+  useEffect(() => {
+    if (route.page !== 'game' || !selectedPaintingId) return;
+    const cached = loadPaintingConfig(selectedPaintingId);
+    if (!cached) return;
+    setGameData(cached);
+  }, [route.page, selectedPaintingId]);
 
   const handleObjectFound = useCallback(
     (obj: HiddenObject) => {

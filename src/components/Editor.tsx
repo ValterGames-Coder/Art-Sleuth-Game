@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { GameData, HiddenObject, Zone } from '../types/game';
+import { savePaintingConfig } from '../utils/paintingConfig';
 import './Editor.css';
 
 type DragMode = 'move' | 'resize' | null;
@@ -21,6 +22,7 @@ export default function Editor({
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingObject, setEditingObject] = useState<HiddenObject | null>(null);
+  const [savedAt, setSavedAt] = useState<string>('');
   const [showCoords, setShowCoords] = useState(true);
   const imageRef = useRef<HTMLImageElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -36,6 +38,12 @@ export default function Editor({
       .then((d: GameData) => setGameData(d))
       .catch(() => alert('Ошибка загрузки данных'));
   }, [paintingId]);
+
+  useEffect(() => {
+    if (!gameData) return;
+    savePaintingConfig(gameData);
+    setSavedAt(new Date().toLocaleTimeString('ru-RU'));
+  }, [gameData]);
 
   const getImageRect = useCallback(() => {
     if (!imageRef.current) return null;
@@ -211,16 +219,17 @@ export default function Editor({
     [],
   );
 
-  const saveEditModal = useCallback(() => {
-    if (!gameData || !editingObject) return;
-    setGameData({
-      ...gameData,
-      objects: gameData.objects.map((o) =>
-        o.id === editingObject.id ? editingObject : o,
-      ),
-    });
-    setEditingObject(null);
-  }, [gameData, editingObject]);
+  const updateEditingObject = useCallback(
+    (next: HiddenObject) => {
+      setEditingObject(next);
+      if (!gameData) return;
+      setGameData({
+        ...gameData,
+        objects: gameData.objects.map((o) => (o.id === next.id ? next : o)),
+      });
+    },
+    [gameData],
+  );
 
   if (!gameData) {
     return <div className="editor-loading">Загрузка...</div>;
@@ -236,6 +245,9 @@ export default function Editor({
         </button>
         <h1 className="editor-title">Редактор зон</h1>
         <div className="editor-toolbar-actions">
+          <span className="editor-save-state">
+            Автосохранение: {savedAt || '...'}
+          </span>
           <label className="editor-toggle">
             <input
               type="checkbox"
@@ -412,50 +424,39 @@ export default function Editor({
               <input
                 type="text"
                 value={editingObject.name}
-                onChange={(e) =>
-                  setEditingObject({ ...editingObject, name: e.target.value })
-                }
+                onChange={(e) => updateEditingObject({ ...editingObject, name: e.target.value })}
               />
               <label>Заголовок факта</label>
               <input
                 type="text"
                 value={editingObject.fact.title}
-                onChange={(e) =>
-                  setEditingObject({
-                    ...editingObject,
-                    fact: { ...editingObject.fact, title: e.target.value },
-                  })
-                }
+                onChange={(e) => updateEditingObject({
+                  ...editingObject,
+                  fact: { ...editingObject.fact, title: e.target.value },
+                })}
               />
               <label>Описание</label>
               <textarea
                 rows={5}
                 value={editingObject.fact.description}
-                onChange={(e) =>
-                  setEditingObject({
-                    ...editingObject,
-                    fact: { ...editingObject.fact, description: e.target.value },
-                  })
-                }
+                onChange={(e) => updateEditingObject({
+                  ...editingObject,
+                  fact: { ...editingObject.fact, description: e.target.value },
+                })}
               />
               <label>Источник</label>
               <input
                 type="text"
                 value={editingObject.fact.source}
-                onChange={(e) =>
-                  setEditingObject({
-                    ...editingObject,
-                    fact: { ...editingObject.fact, source: e.target.value },
-                  })
-                }
+                onChange={(e) => updateEditingObject({
+                  ...editingObject,
+                  fact: { ...editingObject.fact, source: e.target.value },
+                })}
               />
             </div>
             <div className="editor-modal-actions">
               <button className="editor-btn" onClick={() => setEditingObject(null)}>
-                Отмена
-              </button>
-              <button className="editor-btn editor-btn-primary" onClick={saveEditModal}>
-                Сохранить
+                Закрыть
               </button>
             </div>
           </div>
