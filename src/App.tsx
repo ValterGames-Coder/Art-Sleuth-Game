@@ -3,6 +3,7 @@ import GameCanvas from './components/GameCanvas';
 import ObjectList from './components/ObjectList';
 import InfoPopup from './components/InfoPopup';
 import Editor from './components/Editor';
+import AssignmentPage from './components/AssignmentPage';
 import type {
   GameData,
   HiddenObject,
@@ -12,7 +13,7 @@ import type {
 import { loadPaintingConfig } from './utils/paintingConfig';
 import './App.css';
 
-type Page = 'game' | 'editor' | 'qr';
+type Page = 'game' | 'editor' | 'qr' | 'assignment';
 
 interface RouteState {
   page: Page;
@@ -21,6 +22,7 @@ interface RouteState {
 
 function parseHash(): RouteState {
   const hash = window.location.hash.replace(/^#/, '').trim();
+  if (hash === 'assignment') return { page: 'assignment', paintingId: null };
   if (hash === 'qr') return { page: 'qr', paintingId: null };
   if (hash.startsWith('editor/')) {
     return { page: 'editor', paintingId: decodeURIComponent(hash.slice(7)) || null };
@@ -187,6 +189,10 @@ export default function App() {
     window.location.hash = '#qr';
   }, []);
 
+  const goToAssignment = useCallback(() => {
+    window.location.hash = '#assignment';
+  }, []);
+
   const onChangePainting = useCallback((id: string) => {
     setLoading(true);
     setResolvedImage(null);
@@ -239,6 +245,10 @@ export default function App() {
     );
   }
 
+  if (route.page === 'assignment') {
+    return <AssignmentPage />;
+  }
+
   return (
     <div className="app">
       <div className="portrait-warning">
@@ -288,6 +298,9 @@ export default function App() {
             </div>
             {!isMobile && (
               <>
+                <button className="editor-link" onClick={goToAssignment} title="Задание Терра-Политех">
+                  Задание 2
+                </button>
                 <button className="editor-link" onClick={goToQr} title="QR-коды">
                   QR
                 </button>
