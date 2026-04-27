@@ -189,10 +189,6 @@ export default function App() {
     window.location.hash = '#qr';
   }, []);
 
-  const goToAssignment = useCallback(() => {
-    window.location.hash = '#assignment';
-  }, []);
-
   const onChangePainting = useCallback((id: string) => {
     setLoading(true);
     setResolvedImage(null);
@@ -298,9 +294,6 @@ export default function App() {
             </div>
             {!isMobile && (
               <>
-                <button className="editor-link" onClick={goToAssignment} title="Задание Терра-Политех">
-                  Задание 2
-                </button>
                 <button className="editor-link" onClick={goToQr} title="QR-коды">
                   QR
                 </button>
